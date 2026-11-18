@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Work out garment costs and compare fabrics by width and price.">
+<meta name="theme-color" content="#0E6B62">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Costing">
+<title>Garment Costing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a workroom cost sheet with three tabs (Costing / Compare / Fabric quote) and a fixed price bar at the bottom */
+:root{
+  --bg:#EEF2F1; --surface:#FFFFFF; --line:#D3DCDA; --fg:#17232B; --muted:#5B6B70;
+  --accent:#0E6B62; --accent-ink:#FFFFFF; --soft:#DCEBE8; --warn:#B4531A;
+  --c-tela:#0E6B62; --c-avios:#5B7FA6; --c-mo:#C08A2E; --c-otros:#9A6A8F; --c-margin:#4F8A5B; --c-log:#7C8794;
+  --f-display:"Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10181B; --surface:#172226; --line:#2A3A3F; --fg:#E6EEEC; --muted:#93A5A8;
+  --accent:#3FB8A9; --accent-ink:#06201D; --soft:#1C3532; --warn:#E59158;
+  --c-tela:#3FB8A9; --c-avios:#86A9D1; --c-mo:#E0B25A; --c-otros:#C597BA; --c-margin:#7CC48A; --c-log:#A4AFBB; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10181B; --surface:#172226; --line:#2A3A3F; --fg:#E6EEEC; --muted:#93A5A8;
+  --accent:#3FB8A9; --accent-ink:#06201D; --soft:#1C3532; --warn:#E59158;
+  --c-tela:#3FB8A9; --c-avios:#86A9D1; --c-mo:#E0B25A; --c-otros:#C597BA; --c-margin:#7CC48A; --c-log:#A4AFBB; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 200px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header h1{font-family:var(--f-display);font-stretch:78%;font-weight:800;font-size:2.1rem;line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:52ch}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--soft);color:var(--accent);padding:3px 8px;border-radius:4px;margin-top:10px}
+.ios{display:flex;gap:10px;align-items:flex-start;background:var(--soft);border:1px solid var(--accent);border-radius:10px;padding:12px 12px 12px 14px;font-size:.88rem}
+.ios p{margin:0;flex:1;min-width:0}
+.ios b{font-weight:600}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--line);padding:4px;border-radius:8px}
+.tabs button{border:0;background:transparent;color:var(--muted);font-weight:600;padding:10px 2px;font-size:.86rem}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.pane{display:flex;flex-direction:column;gap:18px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+section h2{margin:0;font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+section h3{margin:4px 0 0;font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid .full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted);min-width:0}
+input,select{font:inherit;font-family:var(--f-mono);font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;width:100%;min-width:0}
+input[type=text],select{font-family:var(--f-body)}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:.78rem;color:var(--muted);margin:0}
+.calc{font-family:var(--f-mono);font-size:.82rem;color:var(--fg);background:var(--soft);padding:8px 10px;border-radius:6px;font-variant-numeric:tabular-nums;margin:0}
+.rows{display:flex;flex-direction:column;gap:10px}
+.avio{display:grid;grid-template-columns:1.6fr 1fr .9fr auto;gap:8px;align-items:end}
+.avio.two{grid-template-columns:1.6fr 1fr auto}
+.avio label span{white-space:nowrap}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 14px;font-weight:500}
+.icon-btn{padding:10px 12px;color:var(--muted)}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.small{padding:7px 10px;font-size:.82rem}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.seg{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);padding:3px;border-radius:7px}
+.seg button{flex:1;border:0;background:transparent;padding:8px;font-size:.85rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+
+.bar{display:flex;height:12px;border-radius:3px;overflow:hidden;background:var(--line)}
+.bar span{display:block;height:100%}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:.85rem}
+.legend div{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.legend b{font-family:var(--f-mono);font-weight:500;white-space:nowrap}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.kv:last-child{border-bottom:0}
+.kv b{font-family:var(--f-mono);font-weight:500;text-align:right}
+.kv.big b{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:1.6rem;color:var(--accent)}
+.low{color:var(--warn);font-size:.82rem;margin:0}
+
+/* Fabric quote headline */
+.hero{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero div{background:var(--soft);border-radius:8px;padding:10px 12px;min-width:0}
+.hero small{display:block;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hero b{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:1.35rem;color:var(--accent);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+.tool{gap:4px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+.tool select{font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:1.15rem;background:var(--surface);padding:12px;border-radius:8px}
+.filebtn{position:relative;display:inline-flex;flex-direction:row;align-items:center;cursor:pointer;border-radius:6px;padding:10px 14px;font-weight:600;font-size:15px;background:var(--accent);color:var(--accent-ink)}
+.filebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.scard{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.shead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--soft)}
+.shead b{font-family:var(--f-display);font-stretch:85%;font-weight:800;font-size:1.25rem}
+.shead span{color:var(--muted);font-size:.88rem;min-width:0}
+.ssum{margin:0;padding:8px 12px;font-size:.86rem;border-bottom:1px solid var(--line)}
+.srow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 12px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.srow:last-child{border-bottom:0}
+.srow .vn{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.srow .sp{font-family:var(--f-mono);text-align:right;white-space:nowrap}
+.srow .sp small{color:var(--muted);font-size:.75rem}
+.srow .meta{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.75rem;color:var(--muted)}
+.st{display:inline-block;font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:1px 7px;border-radius:3px;border:1px solid currentColor}
+.st.ok{color:var(--accent)}.st.no{color:var(--warn)}.st.wait{color:var(--muted)}
+.hero.two{grid-template-columns:1fr 1fr}.hero.two b{font-size:1.7rem;line-height:1.1;display:block}
+.hero span{display:block;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.wbig{display:flex;flex-direction:column;gap:4px;background:var(--soft);border-radius:8px;padding:14px}
+.wbig b{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:2.3rem;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.wbig span{font-size:.88rem;color:var(--muted)}
+.tela .calc{background:var(--surface)}
+.tela{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.tela-top{display:flex;gap:8px;align-items:end}
+.tela-top label{flex:1}
+.tela .grid{grid-template-columns:repeat(3,1fr)}
+.tela input,.tela select{background:var(--surface)}
+.res{display:flex;flex-direction:column;gap:8px}
+.card{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px;border-radius:8px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.card.best{border-color:var(--accent);background:var(--soft)}
+.card .nm{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.card .pv{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:1.35rem;text-align:right}
+.card .stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:2px}
+.card .stats div{font-family:var(--f-mono);font-size:.88rem}
+.card .stats small{display:block;font-family:var(--f-body);font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.card .det{grid-column:1/-1;font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
+.card .foot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.pill{display:inline-block;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);padding:2px 6px;border-radius:3px;margin-left:6px;vertical-align:2px}
+.diff{font-family:var(--f-mono);font-size:.78rem;color:var(--warn)}
+
+.mx-wrap{overflow-x:auto;margin:0 -4px}
+table.mx{border-collapse:separate;border-spacing:3px;font-family:var(--f-mono);font-size:.82rem;font-variant-numeric:tabular-nums;min-width:100%}
+.mx th{font-weight:500;color:var(--muted);padding:6px 4px;font-size:.75rem;white-space:nowrap}
+.mx td{text-align:center;padding:9px 4px;border-radius:4px;white-space:nowrap;background:var(--soft)}
+.mx td.now{outline:2px solid var(--accent);font-weight:500}
+.mx th.corner{text-align:left}
+
+.saved li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.saved ul{list-style:none;margin:0;padding:0}
+.saved li > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved small{color:var(--muted);font-family:var(--f-mono)}
+
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--fg);color:var(--bg);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:5}
+.dock-in{max-width:640px;margin:0 auto;display:flex;justify-content:flex-start;align-items:flex-end;gap:22px}
+.dock small{display:block;white-space:nowrap;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7;max-width:38vw;overflow:hidden;text-overflow:ellipsis}
+.dock .p{font-family:var(--f-display);font-stretch:80%;font-weight:800;font-size:1.7rem;line-height:1.05;font-variant-numeric:tabular-nums}
+.dock .c{font-family:var(--f-mono);font-size:1rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));background:var(--accent);color:var(--accent-ink);padding:8px 14px;border-radius:6px;font-size:.9rem;z-index:6;max-width:90vw;text-align:center}
+@media (max-width:420px){
+  .avio{grid-template-columns:1fr 1fr auto}.avio.two{grid-template-columns:1fr auto}.avio .nm{grid-column:1/-1}
+  .legend{grid-template-columns:1fr}.tela .grid{grid-template-columns:1fr 1fr}.hero b{font-size:1.15rem}}
+@media (prefers-reduced-motion:no-preference){.bar span{transition:width .25s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Garment Costing</h1>
+    <p>Cost a garment, compare and quote fabrics, estimate knit weight and width, and search your own price list.</p>
+    <span class="tag" id="exampleTag">Example loaded: piqué polo</span>
+  </header>
+
+  <div class="ios" id="iosTip" hidden>
+    <p><b>Install on iPhone:</b> tap the Share button, then <b>Add to Home Screen</b>.</p>
+    <button type="button" class="icon-btn" id="iosClose" aria-label="Dismiss">✕</button>
+  </div>
+
+  <label class="tool">Tool
+    <select id="toolSel">
+      <option value="costeo">Garment costing</option>
+      <option value="comparar">Compare fabrics</option>
+      <option value="tela">Fabric quote</option>
+      <option value="peso">Weight and width</option>
+      <option value="buscar">Price search</option>
+    </select>
+  </label>
+
+  <!-- ============ COSTING ============ -->
+  <div class="pane" id="pane-costeo">
+  <section>
+    <h2>Garment</h2>
+    <div class="grid">
+      <label class="full">Name<input type="text" id="nombre"></label>
+      <label>Order quantity<input type="number" id="unidades" min="1" step="1" inputmode="numeric"></label>
+      <label>Currency<select id="moneda"><option>USD</option><option>EUR</option><option>GBP</option><option>MXN</option><option>COP</option><option>PEN</option></select></label>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-tela)"></span>Fabric</h2>
+    <div class="grid">
+      <label>Consumption per garment (m)<input type="number" id="consumo" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Price per meter<input type="number" id="precioM" step="0.01" min="0" inputmode="decimal"></label>
+      <label class="full">Cutting waste (%)<input type="number" id="merma" step="1" min="0" max="50" inputmode="decimal"></label>
+    </div>
+    <p class="calc" id="telaCalc"></p>
+    <p class="hint">Don't know the consumption? The Compare fabrics tool estimates it from the fabric width. Need a fabric price? Build it in Fabric quote.</p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-avios)"></span>Trims</h2>
+    <div id="avios" class="rows"></div>
+    <div class="row"><button type="button" id="addAvio">+ Add trim</button></div>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-mo)"></span>Labor (per garment)</h2>
+    <div class="grid">
+      <label>Cutting<input type="number" id="corte" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Sewing<input type="number" id="confeccion" step="0.01" min="0" inputmode="decimal"></label>
+      <label class="full">Print or embroidery<input type="number" id="decorado" step="0.01" min="0" inputmode="decimal"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-otros)"></span>Other costs (per garment)</h2>
+    <div class="grid">
+      <label>Packaging<input type="number" id="empaque" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Shipping or freight<input type="number" id="envio" step="0.01" min="0" inputmode="decimal"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Selling price</h2>
+    <div class="seg" role="group" aria-label="How to set the price">
+      <button type="button" id="pmMargin" aria-pressed="true">Margin (on price)</button>
+      <button type="button" id="pmMarkup" aria-pressed="false">Markup (on cost)</button>
+    </div>
+    <div class="grid">
+      <label><span id="margenLabel">Target margin (%)</span><input type="number" id="margen" step="1" min="0" inputmode="decimal"></label>
+      <label>Sales tax (%)<input type="number" id="impuesto" step="0.5" min="0" inputmode="decimal"></label>
+    </div>
+    <p class="calc" id="margenCalc"></p>
+    <p class="hint">Margin is profit as a share of the selling price. Markup is profit as a share of cost: 100% markup doubles the cost and equals a 50% margin.</p>
+  </section>
+
+  <section aria-live="polite">
+    <h2>Result</h2>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+    <div>
+      <div class="kv"><span>Cost per garment</span><b id="rCosto"></b></div>
+      <div class="kv big"><span>Suggested price</span><b id="rPrecio"></b></div>
+      <div class="kv"><span>Price with tax</span><b id="rPrecioImp"></b></div>
+      <div class="kv"><span>Profit per garment</span><b id="rGan"></b></div>
+      <div class="kv"><span>Order investment</span><b id="rInv"></b></div>
+      <div class="kv"><span>Order profit</span><b id="rGanLote"></b></div>
+    </div>
+    <p class="low" id="aviso" hidden></p>
+    <div class="row">
+      <button type="button" class="primary" id="guardar">Save garment</button>
+      <button type="button" id="copiar">Copy summary</button>
+      <button type="button" id="nuevo">New garment</button>
+    </div>
+  </section>
+
+  <section class="saved">
+    <h2>Saved garments</h2>
+    <ul id="lista"></ul>
+    <p class="hint" id="vacio">Nothing saved yet. Garments are stored on this device only.</p>
+  </section>
+  </div>
+
+  <!-- ============ COMPARE ============ -->
+  <div class="pane" id="pane-comparar" hidden>
+  <section>
+    <h2>How much fabric does it take?</h2>
+    <div class="seg" role="group" aria-label="How to estimate consumption">
+      <button type="button" id="mRef" aria-pressed="true">I know it at one width</button>
+      <button type="button" id="mArea" aria-pressed="false">Estimate from patterns</button>
+    </div>
+    <div class="grid" id="boxRef">
+      <label>Known consumption (m)<input type="number" id="refConsumo" step="0.01" min="0" inputmode="decimal"></label>
+      <label>At a width of (cm)<input type="number" id="refAncho" step="1" min="50" inputmode="numeric"></label>
+      <p class="hint full">With the same pattern, a wider fabric goes further: consumption drops in proportion to width. Cutting waste from Garment costing is added.</p>
+    </div>
+    <div class="grid" id="boxArea" hidden>
+      <label class="full">Garment type
+        <select id="preset">
+          <option value="">Pick one to preload an area</option>
+          <option value="0.60">Crew-neck T-shirt · 0.60 m²</option>
+          <option value="0.75">Short-sleeve polo · 0.75 m²</option>
+          <option value="0.95">Long-sleeve shirt · 0.95 m²</option>
+          <option value="1.25">Hoodie · 1.25 m²</option>
+          <option value="0.55">Shorts · 0.55 m²</option>
+          <option value="1.10">Trousers · 1.10 m²</option>
+          <option value="0.85">Short dress · 0.85 m²</option>
+        </select>
+      </label>
+      <label>Pattern area (m²)<input type="number" id="area" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Marker efficiency (%)<input type="number" id="efic" step="1" min="40" max="98" inputmode="numeric"></label>
+      <p class="hint full">Areas are approximate for an adult size M. Marker efficiency is the share of fabric actually used; in production it is usually 75–85%.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fabrics to compare</h2>
+    <div id="telas" class="rows"></div>
+    <div class="row"><button type="button" id="addTela">+ Add fabric</button></div>
+    <p class="hint">Width alone does not decide yield. If you have a real marker or CAD consumption for a fabric, enter it in "Actual consumption" and it replaces the estimate. Shrinkage adds length to cut.</p>
+  </section>
+
+  <section aria-live="polite">
+    <h2>Result by fabric</h2>
+    <div class="res" id="res"></div>
+    <p class="hint" id="resNota"></p>
+  </section>
+
+  <section>
+    <h2>Price map</h2>
+    <p class="hint">Final selling price (with tax) for each combination of width and price per meter.</p>
+    <div class="grid">
+      <label>Widths (cm)<input type="text" id="mxAnchos" inputmode="decimal"></label>
+      <label>Prices per meter<input type="text" id="mxPrecios" inputmode="decimal"></label>
+    </div>
+    <div class="mx-wrap"><table class="mx" id="mx"></table></div>
+  </section>
+  </div>
+
+  <!-- ============ FABRIC QUOTE ============ -->
+  <div class="pane" id="pane-tela" hidden>
+  <section>
+    <h2>Fabric</h2>
+    <div class="grid">
+      <label class="full">Name or reference<input type="text" id="fName"></label>
+      <label>Construction<select id="fConstr"><option value="knit">Knit</option><option value="woven">Woven</option></select></label>
+      <label>Order quantity (kg)<input type="number" id="fOrderKg" step="1" min="0" inputmode="decimal"></label>
+      <label>Finished weight (g/m²)<input type="number" id="fGsm" step="1" min="20" inputmode="numeric"></label>
+      <label>Usable width (cm)<input type="number" id="fWidth" step="1" min="50" inputmode="numeric"></label>
+    </div>
+    <p class="calc" id="fSpecCalc"></p>
+    <p class="hint">Use the finished weight and the usable width after finishing. For tubular fabric, enter the full open width (tube width × 2).</p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-tela)"></span>Yarn</h2>
+    <div id="yarns" class="rows"></div>
+    <div class="row"><button type="button" id="addYarn">+ Add yarn</button></div>
+    <p class="calc" id="fYarnCalc"></p>
+    <p class="low" id="fYarnWarn" hidden></p>
+    <p class="hint">Enter each yarn's share of the fabric by weight and its price delivered to the mill. Elastane, though a small share, often weighs heavily on price.</p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-avios)"></span><span id="fKnitTitle">Knitting</span></h2>
+    <div class="grid">
+      <label><span id="fKnitLabel">Knitting charge (per kg)</span><input type="number" id="fKnit" step="0.01" min="0" inputmode="decimal"></label>
+      <label><span id="fKnitLossLabel">Knitting loss (%)</span><input type="number" id="fKnitLoss" step="0.5" min="0" max="30" inputmode="decimal"></label>
+    </div>
+    <p class="hint" id="fKnitHint"></p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-mo)"></span>Dyeing and wet processing</h2>
+    <div class="seg" role="group" aria-label="Dyeing route">
+      <button type="button" id="rPiece" aria-pressed="true">Piece dyed</button>
+      <button type="button" id="rYarn" aria-pressed="false">Yarn dyed</button>
+      <button type="button" id="rNone" aria-pressed="false">Undyed</button>
+    </div>
+    <div class="grid" id="boxYarnDye" hidden>
+      <label>Yarn dyeing charge (per kg)<input type="number" id="fYdCharge" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Yarn dyeing loss (%)<input type="number" id="fYdLoss" step="0.5" min="0" max="30" inputmode="decimal"></label>
+    </div>
+    <div class="grid">
+      <label><span id="fDyeLabel">Dyeing charge (per kg)</span><input type="number" id="fDye" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Wet process loss (%)<input type="number" id="fDyeLoss" step="0.5" min="0" max="30" inputmode="decimal"></label>
+    </div>
+    <p class="hint">Charges apply to the weight entering each process. Dark and reactive shades cost more than light ones. Cotton knits usually lose 4–8% in dyeing; enzyme washes add 2–4%.</p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-mo)"></span>Finishing and printing</h2>
+    <div id="fins" class="rows"></div>
+    <div class="row"><button type="button" id="addFin">+ Add finish</button></div>
+    <p class="hint">Compacting, enzyme, softener, mercerizing, brushing, wicking, antimicrobial, coating. Printing is usually quoted per meter.</p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-otros)"></span>Order costs and quality</h2>
+    <h3>Fixed costs per order</h3>
+    <div id="fixes" class="rows"></div>
+    <div class="row"><button type="button" id="addFix">+ Add fixed cost</button></div>
+    <div class="grid">
+      <label>Packing and inland freight (per kg)<input type="number" id="fPack" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Second quality allowance (%)<input type="number" id="fReject" step="0.5" min="0" max="30" inputmode="decimal"></label>
+    </div>
+    <p class="hint">Fixed costs (lab dips, testing, setup, minimum surcharges) are spread over the order quantity, so small orders cost more per kilo.</p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-margin)"></span>Mill overhead and profit</h2>
+    <div class="seg" role="group" aria-label="How to apply profit">
+      <button type="button" id="fpMargin" aria-pressed="true">Margin (on price)</button>
+      <button type="button" id="fpMarkup" aria-pressed="false">Markup (on cost)</button>
+    </div>
+    <div class="grid">
+      <label>Overhead (% of cost)<input type="number" id="fOverhead" step="0.5" min="0" inputmode="decimal"></label>
+      <label><span id="fProfitLabel">Profit margin (%)</span><input type="number" id="fProfit" step="0.5" min="0" inputmode="decimal"></label>
+      <label class="full">Financing or payment terms (% of price)<input type="number" id="fFinance" step="0.25" min="0" inputmode="decimal"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-log)"></span>Logistics</h2>
+    <div class="grid">
+      <label>Freight and insurance (per kg)<input type="number" id="fFreight" step="0.01" min="0" inputmode="decimal"></label>
+      <label>Import duty (%)<input type="number" id="fDuty" step="0.5" min="0" inputmode="decimal"></label>
+    </div>
+    <p class="hint">Leave both at 0 for an ex-mill quote. Duty is applied to the price plus freight.</p>
+  </section>
+
+  <section aria-live="polite">
+    <h2>Fabric quote</h2>
+    <div class="hero">
+      <div><small>Landed / kg</small><b id="qKg"></b></div>
+      <div><small>Per meter</small><b id="qM"></b></div>
+      <div><small>Per yard</small><b id="qYd"></b></div>
+    </div>
+    <div class="bar" id="fBar"></div>
+    <div class="legend" id="fLegend"></div>
+    <div>
+      <div class="kv"><span>Manufacturing cost / kg</span><b id="qCost"></b></div>
+      <div class="kv"><span>Ex-mill price / kg</span><b id="qEx"></b></div>
+      <div class="kv"><span>Ex-mill price / m</span><b id="qExM"></b></div>
+      <div class="kv"><span>Price per m²</span><b id="qM2"></b></div>
+      <div class="kv"><span>Yarn needed per kg of fabric</span><b id="qYarnKg"></b></div>
+      <div class="kv"><span>Overall process yield</span><b id="qYield"></b></div>
+    </div>
+    <h3>This order</h3>
+    <div>
+      <div class="kv"><span>Fabric length</span><b id="qLen"></b></div>
+      <div class="kv"><span>Yarn to buy</span><b id="qYarnBuy"></b></div>
+      <div class="kv"><span>Order value (landed)</span><b id="qValue"></b></div>
+    </div>
+    <h3>If yarn price moves</h3>
+    <div class="mx-wrap"><table class="mx" id="fSens"></table></div>
+    <div class="row">
+      <button type="button" class="primary" id="fUse">Use in Costing</button>
+      <button type="button" id="fCompare">Add to Compare</button>
+      <button type="button" id="fCopy">Copy quote</button>
+    </div>
+    <div class="row">
+      <button type="button" id="fSave">Save quote</button>
+      <button type="button" id="fNew">New quote</button>
+    </div>
+  </section>
+
+  <section class="saved">
+    <h2>Saved fabric quotes</h2>
+    <ul id="fLista"></ul>
+    <p class="hint" id="fVacio">Nothing saved yet. Quotes are stored on this device only.</p>
+  </section>
+  </div>
+
+  <!-- ============ WEIGHT ============ -->
+  <div class="pane" id="pane-peso" hidden>
+  <section>
+    <h2>Machine and fabric</h2>
+    <div class="seg" role="group" aria-label="Structure">
+      <button type="button" id="wJersey" aria-pressed="false">Single jersey</button>
+      <button type="button" id="wPique" aria-pressed="true">Piqué</button>
+    </div>
+    <div class="grid">
+      <label>Machine diameter (inches)<input type="number" id="wDia" step="1" min="0" inputmode="decimal"></label>
+      <label>Gauge (needles per inch)<input type="number" id="wGauge" step="1" min="0" inputmode="decimal"></label>
+    </div>
+    <p class="calc" id="wMachine"></p>
+    <label>Finish
+      <select id="wFinish">
+        <option value="greige">Greige, off the machine</option>
+        <option value="stentered">Dyed, stentered to width</option>
+        <option value="compacted">Dyed and compacted</option>
+        <option value="relaxed">Washed and tumble dried</option>
+      </select>
+    </label>
+    <p class="hint" id="wFinishHint"></p>
+  </section>
+
+  <section>
+    <h2><span class="dot" style="background:var(--c-tela)"></span>Yarns and stitch length</h2>
+    <div id="wYarns" class="rows"></div>
+    <div class="row"><button type="button" id="addWYarn">+ Add yarn</button></div>
+    <p class="hint">One row is enough when every feeder runs the same yarn at the same stitch length. Add a row when feeders differ: knit and tuck courses in piqué, or stripes in another yarn. "Feeders" is how many feeders of the repeat use that row.</p>
+    <p class="hint">Stitch length is the yarn per needle, in mm. You can also type the length per 100 needles in cm: 27 is read as 2.70 mm.</p>
+  </section>
+
+  <section aria-live="polite">
+    <h2>Estimated weight and width</h2>
+    <div class="hero two">
+      <div><small>Weight</small><b id="wMid"></b><span id="wRange"></span></div>
+      <div><small>Open width</small><b id="wWid"></b><span id="wWidRange"></span></div>
+    </div>
+    <p class="hint" id="wWidNote"></p>
+    <p class="low" id="wWarn" hidden></p>
+    <h3>Same fabric in each finish</h3>
+    <div class="mx-wrap"><table class="mx" id="wFinTable"></table></div>
+    <div>
+      <div class="kv"><span>Weight per square yard</span><b id="wOz"></b></div>
+      <div class="kv"><span>Average stitch length</span><b id="wAvgL"></b></div>
+      <div class="kv"><span>Average yarn count</span><b id="wAvgTex"></b></div>
+      <div class="kv" id="wCompRow"><span>Yarn by weight</span><b id="wComp"></b></div>
+      <div class="kv" id="wTubeRow"><span>Tubular width</span><b id="wTube"></b></div>
+      <div class="kv" id="wShrRow"><span>Width shrinkage left</span><b id="wShr"></b></div>
+      <div class="kv" id="wMkgRow"><span>Meters per kilo</span><b id="wMkg"></b></div>
+    </div>
+    <div class="row">
+      <button type="button" class="primary" id="wUse">Use in Quote</button>
+      <button type="button" id="wCopy">Copy result</button>
+      <button type="button" id="wNew">Start over</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fine-tune (optional)</h2>
+    <div class="grid">
+      <label>Weight lost in dyeing (%)<input type="number" id="wLoss" step="0.5" min="0" max="30" inputmode="decimal"></label>
+      <label>Finish to this open width (cm)<input type="number" id="wWidth" step="1" min="0" inputmode="numeric" placeholder="optional"></label>
+    </div>
+    <p class="calc" id="wConst"></p>
+    <p class="hint">Scouring and bleaching usually remove 4–6% of a cotton fabric's weight, and an enzyme wash 2–4% more. Polyester loses about 1%. Greige fabric ignores this value.</p>
+    <p class="hint">Weight and width move together. If the finisher sets the fabric wider than its natural width, it gets lighter by the same proportion and keeps more width shrinkage. Enter the width you will ask for and the weight follows.</p>
+  </section>
+
+  <section>
+    <h2>Calibrate with a real fabric (optional)</h2>
+    <p class="hint">Enter above the machine, yarns, stitch lengths and finish of a fabric you have already measured, then its real weight and width here. The app learns the difference and applies it to future estimates of the same structure.</p>
+    <div class="grid">
+      <label>Measured weight (g/m²)<input type="number" id="wMeasured" step="1" min="0" inputmode="decimal"></label>
+      <label>Measured open width (cm)<input type="number" id="wMeasuredW" step="1" min="0" inputmode="decimal" placeholder="optional"></label>
+      <label class="full">Name, e.g. the mill<input type="text" id="wCalName"></label>
+    </div>
+    <p class="calc" id="wCalCalc"></p>
+    <div class="row"><button type="button" id="wCalSave">Save calibration</button></div>
+    <label>Constants to use<select id="wCalSel"></select></label>
+    <div class="row"><button type="button" class="small" id="wCalDel" hidden>Delete this calibration</button></div>
+  </section>
+  </div>
+
+  <!-- ============ PRICE SEARCH ============ -->
+  <div class="pane" id="pane-buscar" hidden>
+  <section>
+    <h2>Your price list</h2>
+    <p class="calc" id="sInfo"></p>
+    <p class="low" id="sErr" hidden></p>
+    <div class="row">
+      <label class="filebtn"><span id="sLoadTxt">Load file</span><input type="file" id="sFile" accept=".xlsx,.csv,.txt"></label>
+      <button type="button" id="sClear" hidden>Remove data</button>
+    </div>
+    <p class="hint">Load an Excel (.xlsx) or CSV file with one row per code and vendor. The first row of the first sheet must hold the headers: Code, Description, Vendor, Price, Currency, Unit, Status, Updated. Only Code is required.</p>
+    <p class="hint">The data stays in this browser, on this device. It is not uploaded anywhere.</p>
+  </section>
+
+  <section id="sBox" hidden>
+    <h2>Search</h2>
+    <label>Code or description<input type="text" id="sQ" placeholder="e.g. ABC12" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+    <div class="seg" role="group" aria-label="Which vendors to show">
+      <button type="button" id="sAll" aria-pressed="true">All vendors</button>
+      <button type="button" id="sOk" aria-pressed="false">Approved only</button>
+    </div>
+    <p class="hint" id="sCount" aria-live="polite"></p>
+    <div class="res" id="sRes"></div>
+  </section>
+  </div>
+</div>
+
+<div class="dock"><div class="dock-in">
+  <div><small id="dLabelC">Cost</small><span class="c" id="dCosto"></span></div>
+  <div><small id="dLabelP">Sell at</small><span class="p" id="dPrecio"></span></div>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- defaults ---------- */
+const EJEMPLO={nombre:"Short-sleeve piqué polo",unidades:100,moneda:"USD",consumo:0.95,precioM:4.20,merma:10,
+  avios:[{n:"Buttons",c:0.04,q:3},{n:"Brand label",c:0.12,q:1},{n:"Care label",c:0.05,q:1},{n:"Collar interlining",c:0.15,q:1}],
+  corte:0.35,confeccion:2.80,decorado:0.90,empaque:0.30,envio:0.40,margen:55,impuesto:7,pmode:"margin",
+  modo:"ref",refConsumo:0.95,refAncho:150,area:0.75,efic:80,mxAnchos:"140, 150, 160, 180",mxPrecios:"3.50, 4.00, 4.50, 5.00, 6.00",
+  telas:[{n:"100% cotton piqué",a:150,p:4.20,u:"m",g:220,s:0,k:0},{n:"Tubular piqué",a:180,p:9.80,u:"kg",g:210,s:0,k:0},{n:"Cotton-poly piqué",a:160,p:3.90,u:"m",g:200,s:0,k:0}]};
+const VACIO={nombre:"",unidades:50,moneda:"USD",consumo:0,precioM:0,merma:10,avios:[{n:"",c:0,q:1}],corte:0,confeccion:0,decorado:0,empaque:0,envio:0,margen:50,impuesto:0,pmode:"margin",
+  modo:"area",refConsumo:0,refAncho:150,area:0,efic:80,mxAnchos:"140, 150, 160, 180",mxPrecios:"3, 4, 5, 6",telas:[{n:"Fabric A",a:150,p:0,u:"m",g:180,s:0,k:0}]};
+const F=["nombre","unidades","moneda","consumo","precioM","merma","corte","confeccion","decorado","empaque","envio","margen","impuesto","refConsumo","refAncho","area","efic","mxAnchos","mxPrecios"];
+
+const F_EJEMPLO={fName:"Cotton piqué 210 g/m²",fConstr:"knit",fOrderKg:1500,fGsm:210,fWidth:180,
+  yarns:[{n:"Combed cotton Ne 24/1",s:100,p:3.60}],
+  fKnit:0.55,fKnitLoss:2,route:"piece",fYdCharge:1.20,fYdLoss:3,fDye:1.40,fDyeLoss:6,
+  fins:[{n:"Enzyme bio-polish",c:0.25,u:"kg"},{n:"Compacting",c:0.15,u:"kg"},{n:"Silicone softener",c:0.10,u:"kg"}],
+  fixes:[{n:"Lab dips",c:60},{n:"Lab testing",c:180}],
+  fPack:0.08,fReject:2,fOverhead:8,fProfit:12,fpmode:"margin",fFinance:1.5,fFreight:0.35,fDuty:0};
+const F_VACIO={fName:"",fConstr:"knit",fOrderKg:1000,fGsm:180,fWidth:160,yarns:[{n:"",s:100,p:0}],
+  fKnit:0,fKnitLoss:2,route:"piece",fYdCharge:0,fYdLoss:3,fDye:0,fDyeLoss:6,fins:[{n:"",c:0,u:"kg"}],fixes:[{n:"",c:0}],
+  fPack:0,fReject:2,fOverhead:0,fProfit:10,fpmode:"margin",fFinance:0,fFreight:0,fDuty:0};
+const FF=["fName","fConstr","fOrderKg","fGsm","fWidth","fKnit","fKnitLoss","fYdCharge","fYdLoss","fDye","fDyeLoss","fPack","fReject","fOverhead","fProfit","fFinance","fFreight","fDuty"];
+
+/* weight estimator: Munden's area constants for plain jersey (loops per cm² × loop length² in cm),
+   scaled per finish by the shrinkage usually left in the fabric. Piqué uses a reference multiplier. */
+const WK={greige:19.0,stentered:20.5,compacted:21.8,relaxed:23.1},W_PIQUE=1.14,FINS=["greige","stentered","compacted","relaxed"];
+/* wale constants (wales per cm × loop length in cm) per finish; piqué spreads wider because of the tuck loops */
+const WKW={greige:3.8,stentered:3.9,compacted:4.0,relaxed:4.2},W_PIQUE_W=0.88;
+const W_SHORT={greige:"Greige",stentered:"Stentered",compacted:"Compacted",relaxed:"Washed"};
+const W_HINT={greige:"Straight off the knitting machine, before any wet process. The fabric will change a lot in dyeing.",
+  stentered:"Finished to width without compacting. It usually has about 6% shrinkage left each way, so it weighs less now and more after washing.",
+  compacted:"The usual delivery state for cut-and-sew knits, with about 3% shrinkage left each way.",
+  relaxed:"After washing and tumble drying, with no shrinkage left. This is the heaviest the fabric gets."};
+const W_EJEMPLO={wStruct:"pique",wDia:30,wGauge:24,wFinish:"compacted",wLoss:5,wWidth:"",wMeasured:"",wMeasuredW:"",wCalName:"",wCalSel:"",
+  wy:[{n:"Combed cotton",c:24,u:"Ne",pl:1,l:2.95,f:2},{n:"Combed cotton",c:24,u:"Ne",pl:1,l:2.60,f:2}]};
+const W_VACIO={wStruct:"jersey",wFinish:"compacted",wLoss:5,wWidth:"",wMeasured:"",wCalName:"",wCalSel:"",wy:[{n:"",c:30,u:"Ne",pl:1,l:"",f:1}]};
+const WFIELDS=["wDia","wGauge","wFinish","wLoss","wWidth","wMeasured","wMeasuredW","wCalName"],WF=[...WFIELDS,"wCalSel"];
+const KEY="garments",KEYF="fabricQuotes",KEYD="draft",KEYC="weightCal";
+const $=id=>document.getElementById(id);
+const num=v=>{const n=parseFloat(String(v).replace(",","."));return isFinite(n)?n:0};
+const pct=(id,max)=>Math.min(Math.max(num($(id).value),0),max)/100;
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let avios=[],telas=[],modo="ref",tab="costeo",pmode="margin";
+let yarns=[],fins=[],fixes=[],route="piece",fpmode="margin",ready=false;
+let wy=[],wStruct="pique",wCalSel="";
+
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||"null");localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+function fmt(v){const m=$("moneda").value;if(!isFinite(v))v=0;
+  try{return new Intl.NumberFormat("en-US",{style:"currency",currency:m,maximumFractionDigits:(m==="COP")?0:2}).format(v)}catch(e){return v.toFixed(2)}}
+const n2=v=>(isFinite(v)?v:0).toLocaleString("en-US",{maximumFractionDigits:2,minimumFractionDigits:2});
+const n0=v=>Math.round(isFinite(v)?v:0).toLocaleString("en-US");
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+function press(map,val){Object.entries(map).forEach(([id,v])=>$(id).setAttribute("aria-pressed",v===val))}
+/* price from cost: margin is on price, markup is on cost */
+function priceFrom(cost,p,mode){return mode==="markup"?cost*(1+p/100):cost/(1-Math.min(p,95)/100)}
+
+/* ---------- generic editable rows ---------- */
+function renderRows(boxId,arr,cols,cls,removeLabel){const box=$(boxId);box.innerHTML="";
+  arr.forEach((it,i)=>{const r=document.createElement("div");r.className="avio"+(cls?" "+cls:"");
+    r.innerHTML=cols.map((c,ci)=>{const id=`${boxId}_${c.k}${i}`;
+      if(c.opts)return `<label><span>${c.label}</span><select id="${id}">${c.opts.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join("")}</select></label>`;
+      return c.text?`<label class="${ci===0?"nm":""}"><span>${c.label}</span><input type="text" id="${id}" value="${esc(it[c.k])}" placeholder="${c.ph||""}"></label>`
+        :`<label><span>${c.label}</span><input type="number" id="${id}" step="${c.step||"0.01"}" min="0" inputmode="decimal" value="${it[c.k]}"></label>`}).join("")
+      +`<button type="button" class="icon-btn" aria-label="${removeLabel}">✕</button>`;
+    cols.forEach(c=>{const el=r.querySelector(`#${boxId}_${c.k}${i}`);if(c.opts)el.value=it[c.k];
+      el.oninput=e=>{it[c.k]=(c.text||c.opts)?e.target.value:num(e.target.value);calc()}});
+    r.querySelector("button").onclick=()=>{arr.splice(i,1);renderRows(boxId,arr,cols,cls,removeLabel);calc()};
+    box.appendChild(r)})}
+const C_AVIO=[{k:"n",label:"Trim",text:1,ph:"e.g. buttons"},{k:"c",label:"Unit cost"},{k:"q",label:"Qty",step:"1"}];
+const C_YARN=[{k:"n",label:"Yarn",text:1,ph:"e.g. cotton Ne 30/1"},{k:"s",label:"Share %",step:"1"},{k:"p",label:"Price / kg"}];
+const C_FIN=[{k:"n",label:"Finish",text:1,ph:"e.g. compacting"},{k:"c",label:"Cost"},{k:"u",label:"Unit",opts:[["kg","per kg"],["m","per meter"]]}];
+const C_FIX=[{k:"n",label:"Fixed cost",text:1,ph:"e.g. lab dips"},{k:"c",label:"Per order"}];
+const renderAvios=()=>renderRows("avios",avios,C_AVIO,"","Remove trim");
+const renderYarns=()=>renderRows("yarns",yarns,C_YARN,"","Remove yarn");
+const renderFins=()=>renderRows("fins",fins,C_FIN,"","Remove finish");
+const renderFixes=()=>renderRows("fixes",fixes,C_FIX,"two","Remove fixed cost");
+
+/* ---------- load / current ---------- */
+function load(d){F.forEach(k=>{$(k).value=d[k]??""});avios=(d.avios||[]).map(a=>({...a}));
+  telas=(d.telas||VACIO.telas).map(t=>({s:0,k:0,g:180,...t}));
+  pmode=d.pmode==="markup"?"markup":"margin";modo=d.modo==="area"?"area":"ref";
+  syncSeg();renderAvios();renderTelas();calc()}
+function current(){const d={};F.forEach(k=>d[k]=$(k).value);d.avios=avios.map(a=>({...a}));d.telas=telas.map(t=>({...t}));d.modo=modo;d.pmode=pmode;return d}
+function fload(d){FF.forEach(k=>{$(k).value=d[k]??""});yarns=(d.yarns||[]).map(a=>({...a}));fins=(d.fins||[]).map(a=>({...a}));fixes=(d.fixes||[]).map(a=>({...a}));
+  route=["piece","yarn","none"].includes(d.route)?d.route:"piece";fpmode=d.fpmode==="markup"?"markup":"margin";
+  syncSeg();renderYarns();renderFins();renderFixes();calc()}
+function fcurrent(){const d={};FF.forEach(k=>d[k]=$(k).value);d.yarns=yarns.map(a=>({...a}));d.fins=fins.map(a=>({...a}));d.fixes=fixes.map(a=>({...a}));d.route=route;d.fpmode=fpmode;return d}
+
+function syncSeg(){
+  press({wJersey:"jersey",wPique:"pique"},wStruct);
+  press({mRef:"ref",mArea:"area"},modo);$("boxRef").hidden=modo!=="ref";$("boxArea").hidden=modo!=="area";
+  press({pmMargin:"margin",pmMarkup:"markup"},pmode);$("margenLabel").textContent=pmode==="markup"?"Markup (%)":"Target margin (%)";
+  press({rPiece:"piece",rYarn:"yarn",rNone:"none"},route);$("boxYarnDye").hidden=route!=="yarn";
+  $("fDyeLabel").textContent=route==="piece"?"Dyeing charge (per kg)":"Wash or wet finishing (per kg)";
+  press({fpMargin:"margin",fpMarkup:"markup"},fpmode);$("fProfitLabel").textContent=fpmode==="markup"?"Profit markup (%)":"Profit margin (%)";
+  const w=$("fConstr").value==="woven";
+  $("fKnitTitle").textContent=w?"Weaving":"Knitting";$("fKnitLabel").textContent=w?"Weaving charge (per kg)":"Knitting charge (per kg)";
+  $("fKnitLossLabel").textContent=w?"Weaving loss (%)":"Knitting loss (%)";
+  $("fKnitHint").textContent=w?"Include warping and sizing in the weaving charge. If the mill quotes per meter, convert with the meters per kilo shown above. Typical loss is 2–4%."
+    :"Finer gauges, jacquards and structures like piqué or interlock cost more to knit than plain jersey. Typical loss is 1–3%.";
+}
+
+/* ---------- compare: fabrics ---------- */
+function renderTelas(){const box=$("telas");box.innerHTML="";
+  telas.forEach((t,i)=>{const r=document.createElement("div");r.className="tela";
+    r.innerHTML=`<div class="tela-top"><label>Fabric<input type="text" id="tn${i}" value="${esc(t.n)}"></label>
+      <button type="button" class="icon-btn" aria-label="Remove fabric">✕</button></div>
+    <div class="grid">
+      <label>Usable width (cm)<input type="number" id="ta${i}" step="1" min="50" inputmode="numeric" value="${t.a}"></label>
+      <label>Price<input type="number" id="tp${i}" step="0.01" min="0" inputmode="decimal" value="${t.p}"></label>
+      <label>Quoted<select id="tu${i}"><option value="m">per meter</option><option value="kg">per kg</option></select></label>
+      <label>Weight (g/m²)<input type="number" id="tg${i}" step="1" min="20" inputmode="numeric" value="${t.g}"></label>
+      <label>Shrinkage (%)<input type="number" id="ts${i}" step="0.5" min="0" max="30" inputmode="decimal" value="${t.s||0}"></label>
+      <label>Actual consumption (m)<input type="number" id="tk${i}" step="0.01" min="0" inputmode="decimal" value="${t.k||""}" placeholder="optional"></label>
+    </div>`;
+    r.querySelector("#tu"+i).value=t.u;
+    r.querySelector("#tn"+i).oninput=e=>{t.n=e.target.value;calc()};
+    [["ta","a"],["tp","p"],["tg","g"],["ts","s"],["tk","k"]].forEach(([p,k])=>{r.querySelector("#"+p+i).oninput=e=>{t[k]=num(e.target.value);calc()}});
+    r.querySelector("#tu"+i).onchange=e=>{t.u=e.target.value;calc()};
+    r.querySelector(".tela-top button").onclick=()=>{telas.splice(i,1);renderTelas();calc()};
+    box.appendChild(r)})}
+
+/* estimated consumption per garment (m, including waste or efficiency) for a width in cm */
+function consumoPara(anchoCm){if(anchoCm<=0)return 0;
+  if(modo==="ref"){return num($("refConsumo").value)*num($("refAncho").value)/anchoCm*(1+num($("merma").value)/100)}
+  const ef=Math.max(1,num($("efic").value))/100;return num($("area").value)/(anchoCm/100*ef)}
+/* final consumption for one fabric: real marker value if given, else the estimate plus shrinkage */
+function consumoTela(t){if(num(t.k)>0)return num(t.k);return consumoPara(t.a)/(1-Math.min(num(t.s),30)/100)}
+function precioMetro(t){return t.u==="kg"?t.p*t.g*(t.a/100)/1000:t.p}
+
+/* ---------- garment maths ---------- */
+let last={},rowsCmp=[];
+function base(){const av=avios.reduce((s,a)=>s+num(a.c)*num(a.q),0);
+  const mo=num($("corte").value)+num($("confeccion").value)+num($("decorado").value);
+  const otros=num($("empaque").value)+num($("envio").value);
+  const p=Math.max(0,num($("margen").value));const imp=num($("impuesto").value);
+  const neto=c=>priceFrom(c,p,pmode);
+  return {av,mo,otros,resto:av+mo+otros,p,imp,neto,venta:c=>neto(c)*(1+imp/100)}}
+
+/* ---------- fabric quote maths ---------- */
+function quote(yarnFactor){
+  const gsm=num($("fGsm").value),w=num($("fWidth").value)/100,orderKg=num($("fOrderKg").value);
+  const mPerKg=gsm>0&&w>0?1000/(gsm*w):0;
+  const dl=pct("fDyeLoss",60),kl=pct("fKnitLoss",60),yl=route==="yarn"?pct("fYdLoss",60):0,rej=pct("fReject",60);
+  const greige=1/(1-dl),yarnKg=greige/(1-kl),rawYarn=yarnKg/(1-yl);
+  const share=yarns.reduce((s,y)=>s+num(y.s),0);
+  const blend=share>0?yarns.reduce((s,y)=>s+num(y.s)*num(y.p),0)/share:0;
+  const cYarn=blend*(yarnFactor||1)*rawYarn;
+  const cYd=route==="yarn"?num($("fYdCharge").value)*rawYarn:0;
+  const cKnit=num($("fKnit").value)*greige;
+  const cDye=num($("fDye").value)*greige;
+  const cFin=fins.reduce((s,f)=>s+(f.u==="m"?num(f.c)*mPerKg:num(f.c)),0);
+  const cFix=orderKg>0?fixes.reduce((s,f)=>s+num(f.c),0)/orderKg:0;
+  const cPack=num($("fPack").value);
+  const sub=cYarn+cYd+cKnit+cDye+cFin+cFix+cPack;
+  const good=sub/(1-rej),cRej=good-sub;
+  const oh=good*num($("fOverhead").value)/100,cost=good+oh;
+  const price0=priceFrom(cost,Math.max(0,num($("fProfit").value)),fpmode);
+  const finc=price0*num($("fFinance").value)/100,ex=price0+finc;
+  const landed=(ex+num($("fFreight").value))*(1+num($("fDuty").value)/100);
+  const perM=mPerKg?landed/mPerKg:0;
+  return {gsm,w,orderKg,mPerKg,share,blend,rawYarn,rej,cost,ex,landed,perM,exM:mPerKg?ex/mPerKg:0,
+    parts:[["Yarn",cYarn,"--c-tela"],[$("fConstr").value==="woven"?"Weaving":"Knitting",cKnit,"--c-avios"],["Dyeing and finishing",cYd+cDye+cFin,"--c-mo"],
+      ["Order costs and seconds",cFix+cPack+cRej,"--c-otros"],["Overhead and profit",oh+(price0-cost)+finc,"--c-margin"],["Logistics",landed-ex,"--c-log"]]}}
+
+/* ---------- main render ---------- */
+function calc(){
+  const b=base();
+  /* costing */
+  const consumo=num($("consumo").value),pm=num($("precioM").value),merma=num($("merma").value);
+  const consumoReal=consumo*(1+merma/100),tela=consumoReal*pm,costo=tela+b.resto;
+  const precio=b.neto(costo),precioImp=precio*(1+b.imp/100);
+  const u=Math.max(1,Math.round(num($("unidades").value)));
+  $("telaCalc").textContent=`${consumo.toFixed(2)} m + ${merma}% waste = ${consumoReal.toFixed(2)} m → ${fmt(tela)} per garment`;
+  const parts=[["Fabric",tela,"--c-tela"],["Trims",b.av,"--c-avios"],["Labor",b.mo,"--c-mo"],["Other",b.otros,"--c-otros"]];
+  $("bar").innerHTML=parts.map(p=>`<span style="width:${costo?p[1]/costo*100:0}%;background:var(${p[2]})"></span>`).join("");
+  $("legend").innerHTML=parts.map(p=>`<div><span><i class="dot" style="background:var(${p[2]})"></i> ${p[0]}</span><b>${fmt(p[1])} · ${costo?Math.round(p[1]/costo*100):0}%</b></div>`).join("");
+  const mEff=precio>0?(precio-costo)/precio*100:0,kEff=costo>0?(precio-costo)/costo*100:0;
+  $("margenCalc").textContent=costo>0?`${mEff.toFixed(1)}% margin = ${kEff.toFixed(1)}% markup = cost × ${(precio/costo).toFixed(2)}`:"Enter costs to see margin and markup.";
+  $("rCosto").textContent=fmt(costo);$("rPrecio").textContent=fmt(precio);$("rPrecioImp").textContent=fmt(precioImp);
+  $("rGan").textContent=fmt(precio-costo);$("rInv").textContent=fmt(costo*u);$("rGanLote").textContent=fmt((precio-costo)*u);
+  const av2=$("aviso");
+  if(pmode==="margin"&&b.p>95){av2.hidden=false;av2.textContent="A margin cannot reach 100%, so it is capped at 95%. To double the cost, switch to Markup and enter 100."}
+  else if(mEff<30&&costo>0){av2.hidden=false;av2.textContent="A margin under 30% often falls short once you sell to retailers or offer discounts."}else av2.hidden=true;
+  last={costo,precio,precioImp,u,tela,av:b.av,mo:b.mo,otros:b.otros,mEff,kEff};
+
+  /* compare */
+  rowsCmp=telas.map(t=>{const pmt=precioMetro(t),c=consumoTela(t),ct=c*pmt,tot=ct+b.resto,kg=c*num(t.g)*(t.a/100)/1000;
+    return {t,pmt,c,ct,tot,kg,pv:b.venta(tot)}}).filter(r=>r.t.a>0).sort((x,y)=>x.pv-y.pv);
+  const best=rowsCmp[0];
+  $("res").innerHTML=rowsCmp.length?rowsCmp.map((r,i)=>`<div class="card ${i===0?"best":""}">
+      <span class="nm">${esc(r.t.n||"Fabric")}${i===0&&rowsCmp.length>1?'<span class="pill">Best price</span>':""}</span>
+      <span class="pv">${fmt(r.pv)}</span>
+      <div class="stats">
+        <div><small>Consumption${num(r.t.k)>0?" (actual)":""}</small>${r.c.toFixed(2)} m</div>
+        <div><small>Per garment</small>${r.kg>0?(r.kg*1000).toFixed(0)+" g":"n/a"}</div>
+        <div><small>Garments / kg</small>${r.kg>0?(1/r.kg).toFixed(2):"n/a"}</div>
+      </div>
+      <span class="det">${r.t.a} cm · ${fmt(r.pmt)}/m → fabric ${fmt(r.ct)} · cost ${fmt(r.tot)}</span>
+      <div class="foot"><span class="diff">${i>0?`+${fmt(r.pv-best.pv)} per garment · +${fmt((r.pv-best.pv)*u)} per order`:""}</span>
+        <button type="button" class="small" data-use="${i}">Use this fabric</button></div>
+    </div>`).join(""):'<p class="hint">Add at least one fabric with its width.</p>';
+  $("resNota").textContent=`Includes trims, labor and other costs from Garment costing (${fmt(b.resto)} per garment) and its ${pmode==="markup"?"markup":"margin"} of ${b.p}%.`;
+
+  const anchos=$("mxAnchos").value.split(/[;\s,]+/).map(num).filter(x=>x>=50).slice(0,8);
+  const precios=$("mxPrecios").value.split(/[;\s]+|,(?=\s)/).map(num).filter(x=>x>0).slice(0,10);
+  const vals=precios.map(p=>anchos.map(a=>b.venta(consumoPara(a)*p+b.resto)));
+  const flat=vals.flat(),mn=Math.min(...flat),mxv=Math.max(...flat);
+  $("mx").innerHTML=(anchos.length&&precios.length)?
+    `<tr><th class="corner">$/m ↓ · width →</th>${anchos.map(a=>`<th>${a} cm<br>${consumoPara(a).toFixed(2)} m</th>`).join("")}</tr>`+
+    precios.map((p,i)=>`<tr><th>${fmt(p)}</th>${vals[i].map(v=>{const k=mxv>mn?(v-mn)/(mxv-mn):0;
+      return `<td style="background:color-mix(in srgb, var(--warn) ${Math.round(k*45)}%, var(--soft))">${fmt(v)}</td>`}).join("")}</tr>`).join("")
+    :'<tr><td class="hint">Enter widths and prices separated by commas.</td></tr>';
+
+  /* fabric quote */
+  const q=quote(1);
+  $("fSpecCalc").textContent=q.mPerKg?`${q.gsm} g/m² × ${q.w.toFixed(2)} m = ${(q.gsm*q.w).toFixed(0)} g per meter → ${q.mPerKg.toFixed(2)} m per kg`:"Enter weight and width to convert between kilos and meters.";
+  $("fYarnCalc").textContent=`Blend price: ${fmt(q.blend)} per kg of yarn`;
+  const yw=$("fYarnWarn");if(yarns.length&&Math.abs(q.share-100)>0.01){yw.hidden=false;yw.textContent=`Shares add up to ${n2(q.share)}%, not 100%. The blend price is weighted as entered.`}else yw.hidden=true;
+  $("qKg").textContent=fmt(q.landed);$("qM").textContent=fmt(q.perM);$("qYd").textContent=fmt(q.perM*0.9144);
+  $("fBar").innerHTML=q.parts.map(p=>`<span style="width:${q.landed?Math.max(0,p[1])/q.landed*100:0}%;background:var(${p[2]})"></span>`).join("");
+  $("fLegend").innerHTML=q.parts.map(p=>`<div><span><i class="dot" style="background:var(${p[2]})"></i> ${p[0]}</span><b>${fmt(p[1])} · ${q.landed?Math.round(p[1]/q.landed*100):0}%</b></div>`).join("");
+  $("qCost").textContent=fmt(q.cost);$("qEx").textContent=fmt(q.ex);$("qExM").textContent=fmt(q.exM);
+  $("qM2").textContent=fmt(q.gsm>0?q.landed*q.gsm/1000:0);
+  $("qYarnKg").textContent=`${(q.rawYarn/(1-q.rej)).toFixed(3)} kg`;
+  $("qYield").textContent=`${((1-q.rej)/q.rawYarn*100).toFixed(1)}%`;
+  $("qLen").textContent=`${n0(q.orderKg*q.mPerKg)} m · ${n0(q.orderKg*q.mPerKg/0.9144)} yd`;
+  $("qYarnBuy").textContent=`${n0(q.orderKg*q.rawYarn/(1-q.rej))} kg`;
+  $("qValue").textContent=fmt(q.landed*q.orderKg);
+  const steps=[-10,-5,0,5,10].map(d=>({d,q:d===0?q:quote(1+d/100)}));
+  $("fSens").innerHTML=`<tr><th class="corner">Yarn</th>${steps.map(s=>`<th>${s.d>0?"+":""}${s.d}%</th>`).join("")}</tr>
+    <tr><th class="corner">Per kg</th>${steps.map(s=>`<td class="${s.d===0?"now":""}">${fmt(s.q.landed)}</td>`).join("")}</tr>
+    <tr><th class="corner">Per m</th>${steps.map(s=>`<td class="${s.d===0?"now":""}">${fmt(s.q.perM)}</td>`).join("")}</tr>`;
+  last.q=q;
+
+  /* weight and width estimator */
+  const fin=$("wFinish").value,cal=currentCal(),cf=cal?cal.f:1,cw=cal&&cal.fw?cal.fw:1,tol0=wStruct==="pique"?0.08:0.05;
+  const tol=cal?0.03:tol0,tolW=cal&&cal.fw?0.03:tol0;
+  const wq=weight(fin,cf,cw,true),nat=FINS.map(f=>weight(f,cf,cw,false)),feedTot=wy.reduce((a,z)=>a+Math.max(0,num(z.f)),0);
+  $("wFinishHint").textContent=W_HINT[fin]||"";
+  const nd=needles();$("wMachine").textContent=nd?`${n0(nd)} needles on the cylinder`:"Add the machine diameter and gauge to estimate the width.";
+  wy.forEach((y,i)=>{const el=$("wyc"+i);if(!el)return;const tx=texOf(y),l=slOf(y);
+    el.textContent=tx>0&&l>0?`${tx.toFixed(1)} tex · ${l.toFixed(2)} mm per loop${wy.length>1&&feedTot>0?` · ${Math.round(Math.max(0,num(y.f))/feedTot*100)}% of feeders`:""}`:"Enter the count and the stitch length."});
+  const cell=(x,i,v)=>`<td class="${FINS[i]===fin?"now":""}">${x?v(x):"–"}</td>`;
+  $("wFinTable").innerHTML=`<tr><th class="corner"></th>${FINS.map(f=>`<th>${W_SHORT[f]}</th>`).join("")}</tr>
+    <tr><th class="corner">g/m²</th>${nat.map((x,i)=>cell(x,i,x=>Math.round(x.gsm))).join("")}</tr>`+
+    (nat[0]&&nat[0].natW?`<tr><th class="corner">cm</th>${nat.map((x,i)=>cell(x,i,x=>Math.round(x.natW))).join("")}</tr>`:"");
+  const ww=$("wWarn"),warns=[];
+  if(wq){
+    wq.lo=wq.gsm*(1-tol);wq.hi=wq.gsm*(1+tol);
+    $("wMid").textContent=`${Math.round(wq.gsm)} g/m²`;
+    $("wRange").textContent=`${Math.round(wq.lo)}–${Math.round(wq.hi)} g/m²${cal?" · calibrated":""}`;
+    $("wOz").textContent=`${(wq.gsm*0.0294935).toFixed(2)} oz/yd²`;
+    $("wAvgL").textContent=`${wq.lavg.toFixed(2)} mm`;
+    $("wAvgTex").textContent=`${wq.tex.toFixed(1)} tex · Ne ${(590.5/wq.tex).toFixed(1)}`;
+    $("wCompRow").hidden=wq.groups.length<2;$("wComp").textContent=wq.groups.map(g=>`${g.n} ${g.p.toFixed(0)}%`).join(" · ");
+    const has=wq.width>0,rel=nat[3]&&nat[3].natW;
+    ["wTubeRow","wMkgRow"].forEach(id=>$(id).hidden=!has);$("wShrRow").hidden=!(has&&rel);
+    if(has){
+      $("wWid").textContent=`${Math.round(wq.width)} cm`;
+      $("wWidRange").textContent=wq.target>0?"as requested":`${Math.round(wq.width*(1-tolW))}–${Math.round(wq.width*(1+tolW))} cm${cal&&cal.fw?" · calibrated":""}`;
+      $("wTube").textContent=`${Math.round(wq.width/2)} cm · ${(wq.width/2.54).toFixed(1)} in open`;
+      $("wMkg").textContent=`${(100000/(wq.gsm*wq.width)).toFixed(2)} m/kg · ${Math.round(wq.gsm*wq.width/100)} g per meter`;
+      if(rel){const sh=(wq.width-rel)/wq.width*100;$("wShr").textContent=sh>0.5?`about ${sh.toFixed(0)}%`:"none expected";
+        if(wq.target>0&&sh>8)warns.push(`At ${Math.round(wq.target)} cm the fabric keeps about ${sh.toFixed(0)}% width shrinkage. Most buyers accept 5–7%.`)}
+      if(wq.target>0&&wq.natW){const d=(wq.target/wq.natW-1)*100;
+        $("wWidNote").textContent=`Natural width in this finish is ${Math.round(wq.natW)} cm. At ${Math.round(wq.target)} cm the fabric is ${Math.abs(d).toFixed(0)}% ${d>=0?"wider":"narrower"}, so the weight ${d>=0?"drops":"rises"} from ${Math.round(wq.gsmNat)} to ${Math.round(wq.gsm)} g/m².`}
+      else if(wq.target>0)$("wWidNote").textContent="Add the machine diameter and gauge so the weight can follow the requested width.";
+      else $("wWidNote").textContent="Open width is the whole fabric opened flat. If it is finished on a stenter, allow about 4 cm less for the usable width.";
+    }else{$("wWid").textContent="– cm";$("wWidRange").textContent="needs diameter and gauge";$("wWidNote").textContent=""}
+    $("wConst").textContent=`Constants used: ${wq.k.toFixed(1)} for weight, ${wq.kw.toFixed(2)} for width · ${cal?`calibration "${cal.n}"`:"reference values"}`;
+    const tf=Math.sqrt(wq.tex)/(wq.lavg/10);
+    if(tf<11)warns.push("This is a very loose knit for this yarn: the stitch is long for the count. Check the stitch length.");
+    else if(tf>19)warns.push("This is a very tight knit for this yarn: the stitch is short for the count. Check the stitch length and the yarn count.");
+  }else{
+    $("wMid").textContent="– g/m²";$("wRange").textContent="needs yarn count and stitch length";$("wWid").textContent="– cm";$("wWidRange").textContent="";$("wWidNote").textContent="";
+    ["wOz","wAvgL","wAvgTex"].forEach(id=>$(id).textContent="–");["wCompRow","wMkgRow","wTubeRow","wShrRow"].forEach(id=>$(id).hidden=true);$("wConst").textContent="";
+  }
+  ww.hidden=!warns.length;ww.textContent=warns.join(" ");
+  const wm=num($("wMeasured").value),wmw=num($("wMeasuredW").value),wref=weight(fin,1,1,false);
+  const pc=(a,b)=>`${a>=b?"+":""}${((a/b-1)*100).toFixed(1)}%`;
+  $("wCalCalc").textContent=wref&&(wm>0||wmw>0)?[wm>0?`Weight: reference ${Math.round(wref.gsm)}, measured ${wm} g/m² → ${pc(wm,wref.gsm)}`:"",
+      wmw>0&&wref.natW?`Width: reference ${Math.round(wref.natW)}, measured ${wmw} cm → ${pc(wmw,wref.natW)}`:""].filter(Boolean).join(" · ")
+    :"Enter a measured weight to compare it with the reference estimate.";
+  last.w=wq;
+
+  /* bottom bar */
+  if(tab==="buscar"){sDock()}
+  else if(tab==="peso"){$("dLabelC").textContent="Open width";$("dCosto").textContent=wq&&wq.width?`${Math.round(wq.width)} cm`:"–";
+    $("dLabelP").textContent="Weight";$("dPrecio").textContent=wq?`${Math.round(wq.gsm)} g/m²`:"–"}
+  else if(tab==="tela"){$("dLabelC").textContent="Landed / kg";$("dCosto").textContent=fmt(q.landed);$("dLabelP").textContent="Per meter";$("dPrecio").textContent=fmt(q.perM)}
+  else if(tab==="comparar"&&best){$("dLabelC").textContent=best.t.n||"Best fabric";$("dCosto").textContent=`cost ${fmt(best.tot)}`;$("dLabelP").textContent="Sell at";$("dPrecio").textContent=fmt(best.pv)}
+  else{$("dLabelC").textContent="Cost";$("dCosto").textContent=fmt(costo);$("dLabelP").textContent="Sell at";$("dPrecio").textContent=fmt(precioImp)}
+
+  if(ready)store(KEYD,{g:current(),f:fcurrent(),w:wcurrent(),t:tab});
+}
+
+/* ---------- saved lists ---------- */
+function renderList(key,ulId,emptyId,line,open){const s=store(key)||[];const ul=$(ulId);ul.innerHTML="";$(emptyId).hidden=s.length>0;
+  s.forEach((p,i)=>{const li=document.createElement("li");
+    li.innerHTML=`<span>${line(p)}</span><span class="row" style="flex-wrap:nowrap"><button type="button">Open</button><button type="button" class="icon-btn" aria-label="Delete">✕</button></span>`;
+    const [ab,del]=li.querySelectorAll("button");
+    ab.onclick=()=>{open(p);$("exampleTag").hidden=true;window.scrollTo({top:0,behavior:"smooth"})};
+    del.onclick=()=>{s.splice(i,1);store(key,s);renderSaved();toast("Deleted")};
+    ul.appendChild(li)})}
+function renderSaved(){
+  renderList(KEY,"lista","vacio",p=>`${esc(p.nombre||"Untitled")}<br><small>${esc(p.moneda)} · cost ${num(p._costo).toFixed(2)} · price ${num(p._precio).toFixed(2)}</small>`,load);
+  renderList(KEYF,"fLista","fVacio",p=>`${esc(p.fName||"Untitled")}<br><small>${num(p._kg).toFixed(2)} / kg · ${num(p._m).toFixed(2)} / m</small>`,fload)}
+
+const TOOLS=["costeo","comparar","tela","peso","buscar"];
+function setTab(t){if(!TOOLS.includes(t))t="costeo";tab=t;$("toolSel").value=t;TOOLS.forEach(k=>{$("pane-"+k).hidden=t!==k});
+  calc();if(t==="buscar"){$("exampleTag").hidden=true;sRender()}window.scrollTo({top:0})}
+
+/* iPhone install tip: only on iOS, only when not already installed, until dismissed */
+(function(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const installed=window.navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+  if(ios&&!installed&&!store("iosTipClosed"))$("iosTip").hidden=false;
+  $("iosClose").onclick=()=>{$("iosTip").hidden=true;store("iosTipClosed",true)}})();
+
+/* ---------- events ---------- */
+document.addEventListener("input",e=>{const id=e.target.id;if(id&&(F.includes(id)||FF.includes(id)||WF.includes(id))){if(id==="fConstr")syncSeg();calc();$("exampleTag").hidden=true}});
+$("toolSel").oninput=e=>setTab(e.target.value);
+const seg=(ids,fn)=>Object.entries(ids).forEach(([id,v])=>{$(id).onclick=()=>{fn(v);syncSeg();calc()}});
+seg({mRef:"ref",mArea:"area"},v=>modo=v);
+seg({rPiece:"piece",rYarn:"yarn",rNone:"none"},v=>route=v);
+seg({fpMargin:"margin",fpMarkup:"markup"},v=>fpmode=v);
+/* switching margin/markup keeps the same price by converting the percentage */
+seg({pmMargin:"margin",pmMarkup:"markup"},v=>{if(v===pmode)return;const p=Math.max(0,num($("margen").value));
+  const np=v==="markup"?(()=>{const m=Math.min(p,95)/100;return m/(1-m)*100})():p/(100+p)*100;
+  $("margen").value=+np.toFixed(1);pmode=v});
+$("preset").onchange=e=>{if(e.target.value){$("area").value=e.target.value;calc()}};
+$("addAvio").onclick=()=>{avios.push({n:"",c:0,q:1});renderAvios();calc()};
+$("addYarn").onclick=()=>{yarns.push({n:"",s:0,p:0});renderYarns();calc()};
+$("addFin").onclick=()=>{fins.push({n:"",c:0,u:"kg"});renderFins();calc()};
+$("addFix").onclick=()=>{fixes.push({n:"",c:0});renderFixes();calc()};
+$("addTela").onclick=()=>{telas.push({n:"Fabric "+String.fromCharCode(65+telas.length%26),a:150,p:0,u:"m",g:180,s:0,k:0});renderTelas();calc()};
+
+/* Compare → Costing: consumption is stored before waste, because Costing adds waste again */
+$("res").addEventListener("click",e=>{const i=e.target.dataset&&e.target.dataset.use;if(i===undefined)return;const r=rowsCmp[+i];if(!r)return;
+  $("consumo").value=+(r.c/(1+num($("merma").value)/100)).toFixed(3);$("precioM").value=+r.pmt.toFixed(3);
+  $("exampleTag").hidden=true;setTab("costeo");toast(`${r.t.n||"Fabric"} is now the fabric in Costing`)});
+
+$("nuevo").onclick=()=>{load(VACIO);$("exampleTag").hidden=true;window.scrollTo({top:0,behavior:"smooth"})};
+$("guardar").onclick=()=>{const d=current();if(!d.nombre.trim()){toast("Give the garment a name");$("nombre").focus();return}
+  d._costo=last.costo;d._precio=last.precioImp;const s=(store(KEY)||[]).filter(p=>p.nombre!==d.nombre);s.unshift(d);store(KEY,s);renderSaved();toast("Garment saved")};
+function copy(t,ok){try{navigator.clipboard.writeText(t).then(()=>toast(ok),()=>toast("Couldn't copy"))}catch(e){toast("Couldn't copy")}}
+$("copiar").onclick=()=>copy(`${$("nombre").value||"Garment"}\nCost per garment: ${fmt(last.costo)}\n  Fabric ${fmt(last.tela)} · Trims ${fmt(last.av)} · Labor ${fmt(last.mo)} · Other ${fmt(last.otros)}\nMargin: ${last.mEff.toFixed(1)}% (markup ${last.kEff.toFixed(1)}%)\nSuggested price: ${fmt(last.precio)}\nWith tax: ${fmt(last.precioImp)}\nOrder of ${last.u}: investment ${fmt(last.costo*last.u)}, profit ${fmt((last.precio-last.costo)*last.u)}`,"Summary copied");
+
+/* fabric quote actions */
+$("fUse").onclick=()=>{const q=last.q;if(!q.perM){toast("Enter weight and width first");return}
+  $("precioM").value=+q.perM.toFixed(3);$("exampleTag").hidden=true;setTab("costeo");toast("Fabric price per meter sent to Costing")};
+$("fCompare").onclick=()=>{const q=last.q;if(!q.mPerKg){toast("Enter weight and width first");return}
+  telas.push({n:$("fName").value||"Quoted fabric",a:num($("fWidth").value),p:+q.landed.toFixed(2),u:"kg",g:q.gsm,s:0,k:0});
+  renderTelas();setTab("comparar");toast("Fabric added to Compare")};
+$("fCopy").onclick=()=>{const q=last.q;copy(`${$("fName").value||"Fabric"} · ${q.gsm} g/m² · ${(q.w*100).toFixed(0)} cm · ${q.mPerKg.toFixed(2)} m/kg\n`+
+  q.parts.map(p=>`  ${p[0]}: ${fmt(p[1])}/kg`).join("\n")+
+  `\nManufacturing cost: ${fmt(q.cost)}/kg\nEx-mill: ${fmt(q.ex)}/kg · ${fmt(q.exM)}/m\nLanded: ${fmt(q.landed)}/kg · ${fmt(q.perM)}/m · ${fmt(q.perM*0.9144)}/yd\nYarn needed: ${(q.rawYarn/(1-q.rej)).toFixed(3)} kg per kg of fabric\nOrder of ${n0(q.orderKg)} kg: ${n0(q.orderKg*q.mPerKg)} m, value ${fmt(q.landed*q.orderKg)}`,"Quote copied")};
+$("fSave").onclick=()=>{const d=fcurrent();if(!d.fName.trim()){toast("Give the fabric a name");$("fName").focus();return}
+  d._kg=last.q.landed;d._m=last.q.perM;const s=(store(KEYF)||[]).filter(p=>p.fName!==d.fName);s.unshift(d);store(KEYF,s);renderSaved();toast("Quote saved")};
+$("fNew").onclick=()=>{fload(F_VACIO);$("exampleTag").hidden=true;window.scrollTo({top:0,behavior:"smooth"})};
+
+/* ---------- weight estimator ---------- */
+function texOf(y){const c=num(y.c),pl=Math.max(1,num(y.pl)||1);if(c<=0)return 0;
+  switch(y.u){case"Ne":return 590.5/c*pl;case"Nm":return 1000/c*pl;case"dtex":return c/10*pl;case"den":return c/9*pl;default:return c*pl}}
+/* stitch length in mm; a value of 10 or more is read as cm per 100 needles */
+function slOf(y){const v=num(y.l);return v>=10?v/10:v}
+/* needles on the cylinder = π × diameter (in) × gauge (needles per inch) */
+function needles(){const d=num($("wDia").value),g=num($("wGauge").value);return d>0&&g>0?Math.round(Math.PI*d*g):0}
+/* weight = loop density × yarn length per loop × yarn count, with density = K / (average loop length)².
+   width = needles ÷ wales per cm, with wales per cm = Kw / average loop length.
+   A requested width replaces the natural one, and the weight changes in inverse proportion. */
+function weight(fin,cf,cw,useTarget){
+  const rows=wy.map(y=>({y,tex:texOf(y),l:slOf(y),f:num(y.f)})).filter(r=>r.tex>0&&r.l>0&&r.f>0);
+  const F=rows.reduce((a,r)=>a+r.f,0);if(!F)return null;
+  const lavg=rows.reduce((a,r)=>a+r.f*r.l,0)/F,M=rows.reduce((a,r)=>a+r.f*r.l*r.tex,0)/F;
+  const pq=wStruct==="pique",k=WK[fin]*(pq?W_PIQUE:1)*cf,loss=fin==="greige"?0:pct("wLoss",30);
+  const gsmNat=k*M/(lavg*lavg)*(1-loss);
+  const nd=needles(),kw=WKW[fin]*(pq?W_PIQUE_W:1)/cw,natW=nd?nd/(kw/(lavg/10)):0;
+  const target=useTarget?num($("wWidth").value):0;
+  const width=target>0?target:natW,gsm=target>0&&natW?gsmNat*natW/target:gsmNat;
+  const by={};rows.forEach(r=>{const n=(r.y.n||"").trim()||"Yarn";by[n]=(by[n]||0)+r.f*r.l*r.tex});
+  const groups=Object.entries(by).map(([n,v])=>({n,p:v/(M*F)*100}));
+  return {rows,lavg,k,kw,tex:M/lavg,gsm,gsmNat,natW,width,target,nd,groups}}
+function currentCal(){return (store(KEYC)||[]).find(c=>c.st===wStruct&&c.n===wCalSel)||null}
+function renderCals(){const cs=(store(KEYC)||[]).filter(c=>c.st===wStruct),sel=$("wCalSel");
+  sel.innerHTML='<option value="">Reference values</option>'+cs.map(c=>`<option value="${esc(c.n)}">${esc(c.n)} (${c.f>=1?"+":""}${((c.f-1)*100).toFixed(1)}%)</option>`).join("");
+  if(!cs.some(c=>c.n===wCalSel))wCalSel="";sel.value=wCalSel;$("wCalDel").hidden=!wCalSel}
+function renderWY(){const box=$("wYarns");box.innerHTML="";
+  wy.forEach((y,i)=>{const r=document.createElement("div");r.className="tela";
+    r.innerHTML=`<div class="tela-top"><label>Yarn<input type="text" id="wn${i}" value="${esc(y.n)}" placeholder="e.g. combed cotton"></label>
+      <button type="button" class="icon-btn" aria-label="Remove yarn">✕</button></div>
+    <div class="grid">
+      <label>Count<input type="number" id="wc${i}" step="0.1" min="0" inputmode="decimal" value="${y.c}"></label>
+      <label>Unit<select id="wu${i}"><option value="Ne">Ne</option><option value="Nm">Nm</option><option value="den">denier</option><option value="dtex">dtex</option><option value="tex">tex</option></select></label>
+      <label>Plies<input type="number" id="wp${i}" step="1" min="1" inputmode="numeric" value="${y.pl}"></label>
+      <label>Stitch length (mm)<input type="number" id="wl${i}" step="0.01" min="0" inputmode="decimal" value="${y.l}"></label>
+      <label>Feeders<input type="number" id="wf${i}" step="1" min="0" inputmode="numeric" value="${y.f}"></label>
+    </div><p class="calc" id="wyc${i}"></p>`;
+    r.querySelector("#wu"+i).value=y.u;
+    r.querySelector("#wn"+i).oninput=e=>{y.n=e.target.value;touch()};
+    [["wc","c"],["wp","pl"],["wl","l"],["wf","f"]].forEach(([p,k])=>{r.querySelector("#"+p+i).oninput=e=>{y[k]=e.target.value;touch()}});
+    r.querySelector("#wu"+i).onchange=e=>{y.u=e.target.value;touch()};
+    r.querySelector(".tela-top button").onclick=()=>{wy.splice(i,1);renderWY();touch()};
+    box.appendChild(r)})}
+function touch(){$("exampleTag").hidden=true;calc()}
+function wload(d){wStruct=d.wStruct==="jersey"?"jersey":"pique";wCalSel=d.wCalSel||"";
+  WFIELDS.forEach(k=>{$(k).value=d[k]??""});if(!$("wFinish").value)$("wFinish").value="compacted";
+  wy=(d.wy||W_VACIO.wy).map(y=>({...y}));renderWY();renderCals();syncSeg();calc()}
+function wcurrent(){const d={wStruct,wCalSel};WFIELDS.forEach(k=>d[k]=$(k).value);d.wy=wy.map(y=>({...y}));return d}
+
+seg({wJersey:"jersey",wPique:"pique"},v=>{wStruct=v;renderCals();$("exampleTag").hidden=true});
+$("addWYarn").onclick=()=>{const b=wy[wy.length-1]||W_VACIO.wy[0];wy.push({n:b.n,c:b.c,u:b.u,pl:b.pl,l:"",f:1});renderWY();touch()};
+$("wCalSel").oninput=e=>{wCalSel=e.target.value;$("wCalDel").hidden=!wCalSel};
+$("wCalSave").onclick=()=>{const m=num($("wMeasured").value),mw=num($("wMeasuredW").value),n=$("wCalName").value.trim(),ref=weight($("wFinish").value,1,1,false);
+  if(!ref){toast("Enter the yarns and stitch lengths first");return}
+  if(!(m>0)){toast("Enter the measured weight");$("wMeasured").focus();return}
+  if(!n){toast("Give the calibration a name");$("wCalName").focus();return}
+  const f=m/ref.gsm,fw=mw>0&&ref.natW?mw/ref.natW:0;
+  if(f<0.6||f>1.6||(fw&&(fw<0.6||fw>1.6))){toast("Those values are too far from the estimate. Check the machine, yarns and stitch lengths.");return}
+  const all=(store(KEYC)||[]).filter(c=>!(c.st===wStruct&&c.n===n));all.push(fw?{n,st:wStruct,f,fw}:{n,st:wStruct,f});store(KEYC,all);
+  wCalSel=n;renderCals();calc();toast(fw?"Calibration saved for weight and width":"Calibration saved for weight")};
+$("wCalDel").onclick=()=>{store(KEYC,(store(KEYC)||[]).filter(c=>!(c.st===wStruct&&c.n===wCalSel)));wCalSel="";renderCals();calc();toast("Calibration deleted")};
+$("wNew").onclick=()=>{const keep=wStruct;wload({...W_VACIO,wStruct:keep});$("exampleTag").hidden=true;window.scrollTo({top:0,behavior:"smooth"})};
+$("wUse").onclick=()=>{const q=last.w;if(!q){toast("Enter a yarn count and a stitch length first");return}
+  $("fGsm").value=Math.round(q.gsm);$("fConstr").value="knit";if(q.width>0)$("fWidth").value=Math.round(q.width);
+  let msg=q.width>0?"Weight and width sent to the fabric quote":"Weight sent to the fabric quote";
+  if(q.groups.length>1){let acc=0;yarns=q.groups.map((g,i)=>{const s=i===q.groups.length-1?+(100-acc).toFixed(1):+g.p.toFixed(1);acc+=s;
+      const old=yarns.find(y=>(y.n||"").trim().toLowerCase()===g.n.toLowerCase());return {n:g.n,s,p:old?old.p:0}});
+    renderYarns();msg="Weight and yarn shares sent. Check the yarn prices."}
+  syncSeg();$("exampleTag").hidden=true;setTab("tela");toast(msg)};
+$("wCopy").onclick=()=>{const q=last.w;if(!q){toast("Nothing to copy yet");return}
+  const fn=$("wFinish").selectedOptions[0].textContent;
+  copy(`${wStruct==="pique"?"Piqué":"Single jersey"} · ${fn}\n`+q.rows.map(r=>`  ${(r.y.n||"Yarn").trim()||"Yarn"}: ${r.tex.toFixed(1)} tex, stitch length ${r.l.toFixed(2)} mm, ${r.f} feeder${r.f===1?"":"s"}`).join("\n")+
+    `\nEstimated weight: ${Math.round(q.gsm)} g/m² (${Math.round(q.lo)}–${Math.round(q.hi)}) · ${(q.gsm*0.0294935).toFixed(2)} oz/yd²`+
+    (q.width>0?`\nOpen width: ${Math.round(q.width)} cm · tubular ${Math.round(q.width/2)} cm${q.nd?` · ${$("wDia").value}" × ${$("wGauge").value}G, ${n0(q.nd)} needles`:""}`:"")+
+    (q.groups.length>1?`\nYarn by weight: ${q.groups.map(g=>`${g.n} ${g.p.toFixed(0)}%`).join(", ")}`:""),"Result copied")};
+
+/* ---------- price search: the user's own file, kept in this browser ---------- */
+const KEYS="searchData";let sData=store(KEYS)||null,sOnly=false,sFound=null;
+/* header names accepted for each column, in English and Spanish */
+const S_COLS={code:["code","código","codigo","item","sku","ref"],desc:["description","descripción","descripcion","name","nombre"],
+  vendor:["vendor","supplier","proveedor","mill"],price:["price","precio","cost","costo"],cur:["currency","moneda"],
+  unit:["unit","unidad","uom"],status:["status","estado","estatus","approval"],upd:["updated","date","fecha","actualizado"]};
+function sMap(headers){const m={};for(let i=0;i<headers.length;i++){const t=String(headers[i]??"").trim().toLowerCase();if(!t)continue;
+  for(const k in S_COLS){if(m[k]===undefined&&S_COLS[k].some(a=>t===a||t.startsWith(a))){m[k]=i;break}}}return m}
+/* Excel stores dates as day numbers */
+function sDate(v){const n=typeof v==="number"?v:NaN;if(n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+Math.round(n)*864e5).toISOString().slice(0,10);return String(v??"").trim()}
+function sRows(table){
+  const hi=table.findIndex(r=>r&&r.some(c=>String(c??"").trim()!==""));if(hi<0)throw new Error("The file is empty.");
+  const m=sMap(table[hi]);if(m.code===undefined)throw new Error('No "Code" column found. The first row must hold headers such as Code, Description, Vendor, Price, Status.');
+  const g=(r,k)=>m[k]===undefined?"":String(r[m[k]]??"").trim();
+  return table.slice(hi+1).filter(r=>r&&g(r,"code")).map(r=>({code:g(r,"code"),desc:g(r,"desc"),vendor:g(r,"vendor"),
+    price:g(r,"price")===""?null:num(r[m.price]),cur:g(r,"cur"),unit:g(r,"unit"),status:g(r,"status"),upd:m.upd===undefined?"":sDate(r[m.upd])}))}
+
+function csvTable(text){text=text.replace(/^﻿/,"");const first=text.split(/\r?\n/,1)[0];
+  const d=[",",";","\t"].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const out=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else if(ch==='"')q=true;else if(ch===d){row.push(cur);cur=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(cur);cur="";out.push(row);row=[]}
+    else cur+=ch}
+  if(cur!==""||row.length){row.push(cur);out.push(row)}return out}
+
+/* minimal .xlsx reader: an .xlsx is a zip of XML files; the browser inflates them */
+async function inflate(u8){const r=new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate-raw")));return new Uint8Array(await r.arrayBuffer())}
+function unzip(buf){const dv=new DataView(buf),u8=new Uint8Array(buf),td=new TextDecoder();
+  let e=buf.byteLength-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error("This is not a valid Excel file.");
+  const n=dv.getUint16(e+10,true),files={};let o=dv.getUint32(e+16,true);
+  for(let i=0;i<n&&dv.getUint32(o,true)===0x02014b50;i++){
+    const method=dv.getUint16(o+10,true),csize=dv.getUint32(o+20,true),nl=dv.getUint16(o+28,true),el=dv.getUint16(o+30,true),cl=dv.getUint16(o+32,true),lo=dv.getUint32(o+42,true);
+    const name=td.decode(u8.subarray(o+46,o+46+nl)),st=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true);
+    files[name]={method,data:u8.subarray(st,st+csize)};o+=46+nl+el+cl}
+  return {names:Object.keys(files),async text(name){const f=files[name];if(!f)return null;return td.decode(f.method===0?f.data:await inflate(f.data))}}}
+async function xlsxTable(buf){
+  if(typeof DecompressionStream==="undefined")throw new Error("This browser cannot open Excel files. Save the sheet as CSV and load that file.");
+  const z=unzip(buf),P=new DOMParser(),xml=t=>P.parseFromString(t,"application/xml");
+  const sst=await z.text("xl/sharedStrings.xml");
+  const ss=sst?[...xml(sst).getElementsByTagName("si")].map(si=>[...si.getElementsByTagName("t")].filter(t=>t.parentNode.nodeName!=="rPh").map(t=>t.textContent).join("")):[];
+  const name=z.names.filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort((a,b)=>a.length-b.length||a.localeCompare(b))[0];
+  if(!name)throw new Error("No worksheet found in this file.");
+  const out=[];
+  for(const row of xml(await z.text(name)).getElementsByTagName("row")){const r=[];
+    for(const c of row.getElementsByTagName("c")){const L=(c.getAttribute("r")||"").replace(/\d+/g,"");let ci=0;for(const ch of L)ci=ci*26+(ch.charCodeAt(0)-64);ci=L?ci-1:r.length;
+      const t=c.getAttribute("t"),v=c.getElementsByTagName("v")[0];let val="";
+      if(t==="s")val=ss[v?+v.textContent:-1]??"";
+      else if(t==="inlineStr")val=[...c.getElementsByTagName("t")].map(x=>x.textContent).join("");
+      else if(v)val=(t==="str"||t==="b"||t==="e")?v.textContent:+v.textContent;
+      r[ci]=val}
+    out.push(r)}
+  return out}
+
+async function sLoad(file){const err=$("sErr");err.hidden=true;
+  try{const table=/\.(csv|txt)$/i.test(file.name)?csvTable(await file.text()):await xlsxTable(await file.arrayBuffer());
+    const rows=sRows(table);if(!rows.length)throw new Error("No rows with a code were found below the headers.");
+    const d=new Date(),when=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    sData={name:file.name,when,rows};$("sQ").value="";
+    const kept=store(KEYS,sData)!==null;sRender();
+    toast(kept?`${n0(rows.length)} rows loaded`:`${n0(rows.length)} rows loaded, but the file is too large to keep. Load it again next time.`)}
+  catch(e){err.hidden=false;err.textContent=(e&&e.message)||"That file could not be read."}}
+
+function sClass(st){const t=String(st||"").trim().toLowerCase();if(!t)return "wait";
+  if(/^(not|no(\s|$)|rejected|rechaz|denied)/.test(t))return "no";
+  if(/^(approved|aprobad|yes|s[ií](\s|$)|ok)/.test(t))return "ok";return "wait"}
+function sPrice(r){return `${n2(r.price)} ${[r.cur,r.unit].filter(Boolean).join("/")}`.trim()}
+function sSummary(g){const n=g.rows.length,k=g.ok.length,vs=`vendor${n===1?"":"s"}`;
+  if(!k)return `Not approved with any of its ${n} ${vs}.`;
+  return `Approved with ${k} of ${n} ${vs}.`+(g.best?` Best approved price: <b>${esc(sPrice(g.best))}</b> at ${esc(g.best.vendor||"an unnamed vendor")}.`:"")}
+function sRender(){
+  const has=!!(sData&&sData.rows&&sData.rows.length);$("sBox").hidden=!has;$("sClear").hidden=!has;$("sLoadTxt").textContent=has?"Load another file":"Load file";
+  if(!has){$("sInfo").textContent="No price list loaded yet.";sFound=null;sDock();return}
+  const rows=sData.rows,codes=[...new Set(rows.map(r=>r.code))],vend=new Set(rows.map(r=>r.vendor).filter(Boolean));
+  $("sInfo").textContent=`${n0(rows.length)} rows · ${n0(codes.length)} codes · ${vend.size} vendors · ${sData.name}, loaded ${sData.when}`;
+  const q=$("sQ").value.trim().toLowerCase();
+  if(!q){$("sCount").textContent="Type a code, or tap one to try it.";sFound=null;sDock();
+    $("sRes").innerHTML=`<div class="row">${codes.slice(0,6).map(c=>`<button type="button" class="small" data-code="${esc(c)}">${esc(c)}</button>`).join("")}</div>`;return}
+  /* rank: exact code, code starts with, code contains, description contains */
+  const groups=new Map();
+  rows.forEach(r=>{const c=r.code.toLowerCase(),rank=c===q?0:c.startsWith(q)?1:c.includes(q)?2:(r.desc||"").toLowerCase().includes(q)?3:9;if(rank===9)return;
+    let g=groups.get(c);if(!g){g={code:r.code,desc:r.desc,rank,rows:[]};groups.set(c,g)}
+    g.rank=Math.min(g.rank,rank);if(!g.desc)g.desc=r.desc;g.rows.push(r)});
+  const list=[...groups.values()].map(g=>{g.rows.sort((a,b)=>(a.price??Infinity)-(b.price??Infinity));
+      g.ok=g.rows.filter(r=>sClass(r.status)==="ok");g.best=g.ok.find(r=>r.price!=null)||null;g.show=sOnly?g.ok:g.rows;return g})
+    .filter(g=>g.show.length).sort((a,b)=>a.rank-b.rank||a.code.localeCompare(b.code,undefined,{numeric:true}));
+  $("sCount").textContent=list.length?`${n0(list.length)} code${list.length===1?"":"s"} found${list.length>25?", showing the first 25":""}`
+    :(sOnly?"No approved vendor matches that search.":"No code matches that search.");
+  $("sRes").innerHTML=list.slice(0,25).map(g=>`<div class="scard"><div class="shead"><b>${esc(g.code)}</b><span>${esc(g.desc)}</span></div><p class="ssum">${sSummary(g)}</p>`+
+    g.show.map(r=>`<div class="srow"><span class="vn">${esc(r.vendor||"No vendor")}</span>
+      <span class="sp">${r.price!=null?n2(r.price):"–"} <small>${esc([r.cur,r.unit].filter(Boolean).join("/"))}</small></span>
+      <div class="meta"><span class="st ${sClass(r.status)}">${esc(r.status||"No status")}</span>${r===g.best?'<span class="pill" style="margin:0">Best approved price</span>':""}${r.upd?`<span>Updated ${esc(r.upd)}</span>`:""}</div></div>`).join("")+`</div>`).join("");
+  sFound=list;sDock()}
+function sDock(){if(tab!=="buscar")return;const g=sFound&&sFound[0];
+  $("dLabelC").textContent=sFound?"Codes found":"Rows loaded";$("dCosto").textContent=sFound?n0(sFound.length):n0(sData&&sData.rows?sData.rows.length:0);
+  $("dLabelP").textContent=g?`Best approved · ${g.code}`:"Best approved";$("dPrecio").textContent=g&&g.best?n2(g.best.price):"–"}
+
+$("sFile").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(f)await sLoad(f)};
+$("sQ").oninput=sRender;
+$("sAll").onclick=()=>{sOnly=false;press({sAll:false,sOk:true},sOnly);sRender()};
+$("sOk").onclick=()=>{sOnly=true;press({sAll:false,sOk:true},sOnly);sRender()};
+$("sRes").addEventListener("click",e=>{const c=e.target.dataset&&e.target.dataset.code;if(c===undefined)return;$("sQ").value=c;sRender()});
+/* removing data asks for a second tap instead of a dialog */
+$("sClear").onclick=e=>{const b=e.currentTarget;if(b.dataset.sure){delete b.dataset.sure;b.textContent="Remove data";
+    try{localStorage.removeItem(KEYS)}catch(x){}sData=null;$("sQ").value="";$("sRes").innerHTML="";sRender();toast("Price list removed from this device");return}
+  b.dataset.sure="1";b.textContent="Tap again to remove";setTimeout(()=>{if(b.dataset.sure){delete b.dataset.sure;b.textContent="Remove data"}},3500)};
+
+/* ---------- start: restore the last session, or load the example ---------- */
+(function(){const d=store(KEYD);let ok=false;
+  if(d&&d.g&&d.f){try{load(d.g);fload(d.f);wload(d.w||W_EJEMPLO);ok=true;$("exampleTag").hidden=true}catch(e){ok=false}}
+  if(!ok){load(EJEMPLO);fload(F_EJEMPLO);wload(W_EJEMPLO)}
+  ready=true;renderSaved();sRender();setTab(d&&d.t||"costeo")})();
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
+</script>
+</body>
+</html>
